@@ -86,6 +86,12 @@ int main(void){
     float* d_in = d_input;
     float* d_out = d_output;
 
+    cudaEvent_t start,stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     // 每一轮把当前输入规约成 blocksPerGrid 个部分和。
     // 反复执行直到 device 上只剩 1 个 float。
     while (numElements > 1) {
@@ -113,5 +119,11 @@ int main(void){
     CHECK_CUDA(cudaFree(d_output));
     
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("Reduction time: %.6f ms\n", milliseconds);
     return 0;
 }

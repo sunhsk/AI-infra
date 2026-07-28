@@ -66,13 +66,20 @@ int main(void){
     float* d_in = d_input;
     float* d_out = d_output;
 
+
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
+    cudaEventRecord(start);
+
     // 每一轮把当前输入规约成 blocksPerGrid 个部分和。
     // 反复执行直到 device 上只剩 1 个 float。
     while (numElements > 1) {
         int blocksPerGrid = (numElements + threadsPerBlock - 1) / threadsPerBlock;
 
         // 第三个参数是共享内存大小：每个线程一个 float。 
-        reduce_v0<<<blocksPerGrid, threadsPerBlock>>>(d_in, d_out, numElements);
+        reduce_v0<<<blocksPerGrid, threadsPerBlock,threadsPerBlock * sizeof(float)>>>(d_in, d_out, numElements);
         CHECK_CUDA(cudaGetLastError());                                                        //cudaGetLastError()：取出最近一次 CUDA 错误，同时清空错误状态。
 
         numElements = blocksPerGrid;                 
@@ -92,5 +99,12 @@ int main(void){
     CHECK_CUDA(cudaFree(d_output));
     
 
+
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
+    float milliseconds;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    printf("Reduction time: %.6f ms\n", milliseconds);
     return 0;
 }
